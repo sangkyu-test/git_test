@@ -1,0 +1,58 @@
+1.사용할 helm chart를 다운로드 및 압축풀기
+wget https://sangkyu-test.github.io/helm-chart-repo/voltdb-0.1.0.tgz
+tar -zxvf voltdb-0.1.0.tgz
+
+2.압축풀린 디렉터리로 이동 및 helm chart 확인
+cd voltdb
+
+voltdb# tree
+.
+├── Chart.yaml
+└── templates
+    ├── configmap.yaml
+    └── service.yaml
+
+1 directory, 3 files
+
+voltdb#ls
+Chart.yaml  templates
+
+voltdb# cd templates
+voltdb/templates# ls
+configmap.yaml  service.yaml
+
+configmap.yaml 파일에는 라이센스와 hostcount, kfactor, 볼륨마운트에 필요한 configmap이 표함되어있습니다.
+예를 들어 hostcount="3", kfactor="1" 이렇게 지정을 하게되면 voltdb 시작할 때 해당 옵션으로 기동이 되게 되어있습니다.
+이 조건은 host 3개중에 1개가 죽어도 서비스가 가능한 구성입니다.
+configmap.yaml 파일은 처음 구성할 때만 수정을 해주면 되고 그 이후의 구성변경은 service.yaml파일을 이용합니다.
+
+service.yaml 파일에서는 StatefulSet의 replicas: < >, containers의 command: 옵션부분의 두군대의 수정이 필요합니다.
+예를 들어 replicas 3개로 구성해서 기동을 한 다음에 replicas를 5개로 구성하고자 할 때에는 
+replicas: 3 -> replicas: 5
+command: - "--add --host=<기존 voltdb pod name>
+
+voltdb# helm install --name voltdb .
+3개구성화면 넣자.. 
+처음구성할 때 수정이 필요한 부분은 configmap.yaml의 hostcount, kfactor, 그리고 service.yaml의 replicas, command의 hostcount부분이다.
+
+
+
+kfactor=1 의 구성에서 scale이 필요할 때는 host를 2개씩 기존 클러스터에 포함시켜야 정상적으로 리발란싱되면서 새로 구성이 된다.
+scaling이 필요할 때는 service.yaml 파일의 replicas, containers -> command의 옵션을 추가해줘야 된다.
+이 옵션은 기존 voltdb 클러스터에 포함시키기 위한 것이다.
+5개구성화면 넣자..
+
+voltdb# helm upgrade voltdb .
+해당 명령어로 적용을 해주면 replicas: 3 -> 5개로 증설되는 것을 확인할 수 있음.
+하지만 이 때 바로 5대가 Ready 상태가 되지 않고 voltdb partition이 리발란싱을 하면서
+구성이 되기 때문에 한 10분이상의 시간이 소요된다. 다만 리발란싱하는 중에도 서비스에는 영향이 없다.
+
+
+
+
+
+
+
+
+
+
